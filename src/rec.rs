@@ -18,7 +18,7 @@ impl Rec {
     pub fn from_embed() -> DDDDOcrResult<Self> {
         let model = ort::SessionBuilder::new()?
             .with_parallel_execution(true)?
-            .commit_from_memory(include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "./models/common.onnx")))?;
+            .commit_from_memory(include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/common.onnx")))?;
         Ok(Self { model })
     }
 
