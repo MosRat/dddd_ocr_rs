@@ -1,9 +1,9 @@
-use std::io::Read;
 use crate::error::{DDDDOcrError, DDDDOcrResult};
-use image::{DynamicImage, GenericImageView, Luma, Rgba, RgbaImage};
 use image::imageops::FilterType;
-use ndarray::{Array, ArrayBase, Dim, OwnedRepr, Axis, s};
+use image::{DynamicImage, GenericImageView, Luma, RgbaImage};
+use ndarray::{s, Array, ArrayBase, Axis, Dim, OwnedRepr};
 use ort::{inputs, Session};
+use std::io::Read;
 
 
 pub struct Rec {
@@ -1143,15 +1143,15 @@ const KEYS: [&str; 8210] = ["", "笤", "谴", "膀", "荔", "佰", "电", "臁",
 
 #[cfg(test)]
 mod tests {
-    use std::fs::File;
     use crate::rec::Rec;
+    use std::fs::File;
 
     #[test]
     fn test_change_gif() {
         Rec::compose_gif(File::open(r#"tests/authcode.png"#)
             .unwrap())
             .unwrap()
-            .save("/tests/test.png")
+            .save("tests/test.png")
             .unwrap()
     }
 
@@ -1163,7 +1163,7 @@ mod tests {
             let output = model.run_model(&input).unwrap();
             eprintln!("{:?}", output)
         });
-        let input = Rec::preprocess(&image::open(r#"test.png"#.to_string()).unwrap()).unwrap();
+        let input = Rec::preprocess(&image::open(r#"tests/test.png"#.to_string()).unwrap()).unwrap();
         let output = model.run_model(&input).unwrap();
         eprintln!("{:?}", output)
     }

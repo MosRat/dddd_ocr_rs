@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(thiserror::Error, Debug)]
 pub enum DDDDOcrError {
     #[error("ort error:`{0}`")]
@@ -11,9 +12,11 @@ pub enum DDDDOcrError {
 }
 
 impl DDDDOcrError {
+    #[allow(dead_code)]
     pub fn custom(s: &str) -> Self {
         Self::Custom(s.to_string())
     }
 }
 
+#[allow(dead_code)]
 pub type DDDDOcrResult<T> = Result<T, DDDDOcrError>;

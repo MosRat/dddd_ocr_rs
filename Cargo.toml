@@ -2,6 +2,12 @@
 name = "dddd_ocr"
 version = "0.1.0"
 edition = "2021"
+description = "dddd-ocr onnxrumtime infer"
+license = "AGPL-3.0"
+homepage = "https://github.com/MosRat/dddd_ocr_rs"
+repository = "https://github.com/MosRat/dddd_ocr_rs"
+readme = "README.md"
+keywords = ["CAPTCHA", "ocr", "onnx"]
 
 [dependencies]
 image = "0.25"
