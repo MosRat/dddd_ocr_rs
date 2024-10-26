@@ -36,7 +36,7 @@ impl Rec {
     fn preprocess(img: &DynamicImage) -> DDDDOcrResult<ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>> {
         let (w, h) = img.dimensions();
         let img = img
-            .resize_exact(w * 64 / h, 64, image::imageops::FilterType::CatmullRom)
+            .resize_exact(w * 64 / h, 64, FilterType::CatmullRom)
             .to_luma8()
             ;
 
