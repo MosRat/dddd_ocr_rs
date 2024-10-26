@@ -1,5 +1,7 @@
-mod error;
-mod rec;
+pub mod error;
+pub mod rec;
+
+pub use rec::Rec;
 
 
 #[cfg(test)]
