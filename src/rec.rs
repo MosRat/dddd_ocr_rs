@@ -51,7 +51,7 @@ impl Rec {
         Ok(input)
     }
 
-    fn compose_gif<R: Read>(img: R) -> DDDDOcrResult<DynamicImage> {
+    pub fn compose_gif<R: Read>(img: R) -> DDDDOcrResult<DynamicImage> {
         let mut decoder = gif::DecodeOptions::new();
         // Configure the decoder such that it will expand the image to RGBA.
         decoder.set_color_output(gif::ColorOutput::RGBA);
