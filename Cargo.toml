@@ -13,11 +13,11 @@ exclude = [
 ]
 
 [dependencies]
-image = "0.25"
+image = { version = "0.25.4", features = ["gif", "png"], default-features = false }
 imageproc = "0.25"
 ndarray = "0.16"
 ort = { version = "2.0.0-rc.6" }
 thiserror = "1.0.56"
-gif = "0.13.1"
+gif = { version = "0.13.1" }
 
 
