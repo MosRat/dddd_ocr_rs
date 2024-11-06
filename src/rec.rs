@@ -44,7 +44,7 @@ impl Rec {
         Ok(Self { model })
     }
     #[cfg(feature = "use-ncnn")]
-    pub fn from_model_and_params(model_path: &str) -> DDDDOcrResult<Self> {
+    pub fn from_model_and_params() -> DDDDOcrResult<Self> {
         let mut opt = Option::new();
         opt.set_num_threads(8);
         #[cfg(feature = "gpu")]
@@ -55,7 +55,8 @@ impl Rec {
 
         // // 加载模型
         net.load_param_memory(include_bytes!("../models/common.ncnn.param"))?;
-        net.load_model(model_path)?;
+        net.load_model_memory(include_bytes!("../models/common.ncnn.bin"))?;
+        // net.load_model(model_path)?;
         Ok(Self { net })
     }
     #[cfg(feature = "use-ort")]
@@ -1262,7 +1263,7 @@ mod tests {
     #[test]
     #[cfg(feature = "use-ncnn")]
     fn test_models() {
-        let model = Rec::from_model_and_params("models/common.ncnn.bin").unwrap();
+        let model = Rec::from_model_and_params().unwrap();
         (1..=5).for_each(|i| {
             let input = Rec::preprocess(&image::open(format!(r#"E:\WorkSpace\RustProjects\paddleocr_rs\composite{i}.png"#)).unwrap()).unwrap();
             let output = model.run_model(&input).unwrap();

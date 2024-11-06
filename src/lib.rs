@@ -19,7 +19,7 @@ mod tests {
     #[test]
     #[cfg(feature = "use-ncnn")]
     fn it_works() {
-        rec::Rec::from_model_and_params("models/common.ncnn.bin").unwrap();
+        rec::Rec::from_model_and_params().unwrap();
     }
 
 }
