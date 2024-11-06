@@ -9,15 +9,29 @@ repository = "https://github.com/MosRat/dddd_ocr_rs"
 readme = "README.md"
 keywords = ["CAPTCHA", "ocr", "onnx"]
 exclude = [
-    "models/*",
+    "models/*.onnx",
+    "models/*.params",
+    "models/*.config",
 ]
 
 [dependencies]
-image = { version = "0.25.4", features = ["gif", "png"], default-features = false }
+image = { version = "0.25", features = ["gif", "png"], default-features = false }
 imageproc = "0.25"
-ndarray = "0.16"
-ort = { version = "2.0.0-rc.6" }
+ndarray = { version = "0.16", optional = true }
+ort = { version = "2.0.0-rc.6", optional = true }
 thiserror = "1.0.56"
 gif = { version = "0.13.1" }
+ncnnrs = { git = "https://github.com/Baiyuetribe/ncnnrs", default-features = false, optional = true }
+libc = { version = "0.2.161", optional = true }
+anyhow = { version =  "1",optional = true }
 
+[lints.rust]
+#unsafe_code = "forbid"
+warnings = "allow" # deny, warn, allow, or forbid
+
+[features]
+default = ["use-ort"]
+use-ort = ["ort", "ndarray"]
+use-ncnn = ["ncnnrs", "libc","anyhow"]
+gpu = []
 

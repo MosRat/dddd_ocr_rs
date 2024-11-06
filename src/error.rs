@@ -1,8 +1,12 @@
 #[allow(dead_code)]
 #[derive(thiserror::Error, Debug)]
 pub enum DDDDOcrError {
+    #[cfg(feature = "use-ort")]
     #[error("ort error:`{0}`")]
     Ort(#[from] ort::Error),
+    #[cfg(feature = "use-ncnn")]
+    #[error("ncnn error:`{0}`")]
+    Ncnn(#[from] anyhow::Error),
     #[error("io error:`{0}`")]
     Io(#[from] std::io::Error),
     #[error("gif decode error:`{0}`")]

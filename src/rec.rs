@@ -1,38 +1,83 @@
-use crate::error::{DDDDOcrError, DDDDOcrResult};
+use crate::error::DDDDOcrResult;
 use image::imageops::FilterType;
-use image::{DynamicImage, GenericImageView, Luma, RgbaImage};
+use image::{DynamicImage, GenericImageView, RgbaImage};
+#[cfg(feature = "use-ort")]
 use ndarray::{s, Array, ArrayBase, Axis, Dim, OwnedRepr};
+#[cfg(feature = "use-ort")]
 use ort::{inputs, Session};
+#[cfg(feature = "ort")]
+use image::Luma;
+#[cfg(feature = "ort")]
+use crate::error::DDDDOcrError;
+
 use std::io::Read;
-
-
+#[cfg(feature = "use-ncnn")]
+use std::os::raw::c_void;
+#[cfg(feature = "use-ncnn")]
+use libc::c_float;
+#[cfg(feature = "use-ncnn")]
+use ncnnrs::{Mat, Net, Option};
 pub struct Rec {
+    #[cfg(feature = "use-ort")]
     model: Session,
+    #[cfg(feature = "use-ncnn")]
+    net: Net,
 }
 
+
 impl Rec {
+    #[cfg(feature = "use-ort")]
     pub fn new(model: Session) -> Self {
         Self { model }
     }
 
+    #[cfg(feature = "use-ncnn")]
+    pub fn new(net: Net) -> Self {
+        Self { net }
+    }
+
+    #[cfg(feature = "use-ort")]
     pub fn from_embed() -> DDDDOcrResult<Self> {
         let model = ort::SessionBuilder::new()?
             .with_parallel_execution(true)?
             .commit_from_memory(include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/models/common.onnx")))?;
         Ok(Self { model })
     }
+    #[cfg(feature = "use-ncnn")]
+    pub fn from_model_and_params(model_path: &str) -> DDDDOcrResult<Self> {
+        let mut opt = Option::new();
+        opt.set_num_threads(8);
+        #[cfg(feature = "gpu")]
+        opt.use_vulkan_compute(true);
 
+        let mut net = Net::new();
+        net.set_option(&opt); // 设置参数
+
+        // // 加载模型
+        net.load_param_memory(include_bytes!("../models/common.ncnn.param"))?;
+        net.load_model(model_path)?;
+        Ok(Self { net })
+    }
+    #[cfg(feature = "use-ort")]
     pub fn predict_char_score(&self, img: &DynamicImage) -> DDDDOcrResult<Vec<(char, f32)>> {
         let input = Self::preprocess(img)?;
         let output = self.run_model(&input)?;
         Ok(output)
     }
 
+
+    #[cfg(feature = "use-ort")]
     pub fn predict_str(&self, img: &DynamicImage) -> DDDDOcrResult<String> {
         let ret = self.predict_char_score(img)?;
         Ok(ret.into_iter().map(|x| x.0).collect())
     }
+    #[cfg(feature = "use-ncnn")]
+    pub fn predict_str(&self, img: &DynamicImage) -> DDDDOcrResult<String> {
+        let img = Self::preprocess(img)?;
+        Ok(self.run_model(&img)?)
+    }
 
+    #[cfg(feature = "use-ort")]
     fn preprocess(img: &DynamicImage) -> DDDDOcrResult<ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>> {
         let (w, h) = img.dimensions();
         let img = img
@@ -47,9 +92,25 @@ impl Rec {
             input[[0, 0, y as _, x as _]] = (((pixel as f32) / 255.) - 0.5) / 0.5;
         });
 
-
         Ok(input)
     }
+
+    #[cfg(feature = "use-ncnn")]
+    fn preprocess(img: &DynamicImage) -> DDDDOcrResult<Mat> {
+        let (w, h) = img.dimensions();
+        let img = img
+            .resize_exact(w * 64 / h, 64, FilterType::CatmullRom)
+            .to_luma8()
+            ;
+        let normalized_pixels: Vec<f32> = img
+            .pixels()
+            .map(|&p| ((p[0] as f32) / 255.0 - 0.5) / 0.5)
+            .collect();
+
+
+        Ok(unsafe { Mat::new_external_3d(img.width() as i32, 64, 1, normalized_pixels.as_ptr() as *mut c_void, None) })
+    }
+
 
     pub fn compose_gif<R: Read>(img: R) -> DDDDOcrResult<DynamicImage> {
         let mut decoder = gif::DecodeOptions::new();
@@ -91,6 +152,7 @@ impl Rec {
         Ok(DynamicImage::from(composite_image))
     }
 
+    #[cfg(feature = "use-ort")]
     fn run_model(&self, input: &ArrayBase<OwnedRepr<f32>, Dim<[usize; 4]>>) -> DDDDOcrResult<Vec<(char, f32)>> {
         let outputs = self.model.run(inputs!["input1" => input.view()]?)?;
         let output = outputs.iter().next().ok_or(DDDDOcrError::custom("no output"))?.1;
@@ -108,12 +170,40 @@ impl Rec {
                 *index != 0 && *score > 0.25 as _
             })
             .filter_map(|(index, score)| {
-                KEYS.get(index).map(|x| (x.chars().next().unwrap_or(' '), score))
+                KEYS.get(index).map(|x: &_| (x.chars().next().unwrap_or(' '), score))
             })
             .collect();
         Ok(output)
     }
+    #[cfg(feature = "use-ncnn")]
+    pub fn post_process(ptr: *mut std::os::raw::c_void) -> String {
+        unsafe {
+            let mut out_slice = std::slice::from_raw_parts(ptr as *const c_float, 32 * 8210);
+            out_slice
+                .chunks(8210)
+                .map(|chunk| chunk.iter()
+                    .enumerate()
+                    .max_by(|(idxx, px), (idxy, py)| {
+                        px.total_cmp(py)
+                    }).map(|x| {
+                    KEYS[x.0]
+                }).unwrap()
+                )
+                .collect::<_>()
+            // .join("")
+        }
+    }
+    #[cfg(feature = "use-ncnn")]
+    fn run_model(&self, input: &Mat) -> DDDDOcrResult<String> {
+        let mut out = Mat::new();
+        let mut ex = self.net.create_extractor();
+        ex.input("in0", &input).expect("input error!");
+        ex.extract("out0", &mut out).expect("output error!");
+        Ok(Self::post_process(out.data()))
+    }
 }
+
+
 const KEYS: [&str; 8210] = ["", "笤", "谴", "膀", "荔", "佰", "电", "臁", "矍", "同", "奇", "芄", "吠", "6",
     "曛", "荇", "砥", "蹅", "晃", "厄", "殣", "ｃ", "辱", "钋", "杻", "價", "眙", "鴿",
     "⒄", "裙",
@@ -1156,8 +1246,23 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "use-ort")]
     fn test_models() {
         let model = Rec::from_embed().unwrap();
+        (1..=5).for_each(|i| {
+            let input = Rec::preprocess(&image::open(format!(r#"E:\WorkSpace\RustProjects\paddleocr_rs\composite{i}.png"#)).unwrap()).unwrap();
+            let output = model.run_model(&input).unwrap();
+            eprintln!("{:?}", output)
+        });
+        let input = Rec::preprocess(&image::open(r#"tests/test.png"#.to_string()).unwrap()).unwrap();
+        let output = model.run_model(&input).unwrap();
+        eprintln!("{:?}", output)
+    }
+
+    #[test]
+    #[cfg(feature = "use-ncnn")]
+    fn test_models() {
+        let model = Rec::from_model_and_params("models/common.ncnn.bin").unwrap();
         (1..=5).for_each(|i| {
             let input = Rec::preprocess(&image::open(format!(r#"E:\WorkSpace\RustProjects\paddleocr_rs\composite{i}.png"#)).unwrap()).unwrap();
             let output = model.run_model(&input).unwrap();
