@@ -11,7 +11,7 @@ Rust [dddd-ocr](https://github.com/sml2h3/ddddocr) 推理库
 
 ## Description
 
-This crate provides a Rust interface for dddd-ocr using ONNX Runtime or Tecent NCNN for CAPTCHA recognition.
+This crate provides a Rust interface for dddd-ocr using ONNX Runtime or Tencent NCNN for CAPTCHA recognition.
 
 ## License
 
