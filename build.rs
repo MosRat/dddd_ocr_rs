@@ -7,13 +7,16 @@ fn main(){
 
         // 打印以验证设置
         println!("cargo:rerun-if-env-changed=NCNN_INCLUDE_DIR");
-        println!("NCNN_INCLUDE_DIR is set to: {}", env::var("NCNN_INCLUDE_DIR").unwrap());
+        println!("NCNN_INCLUDE_DIR is set to: {}", env::var("NCNN_INCLUDE_DIR")
+            .unwrap_or("E:\\Software\\Nccn\\ncnn-20240820-windows-vs2022\\x64\\include\\ncnn".to_string()));
+
+        let ncnn_lib = env::var("NCNN_LIB_DIR").unwrap_or(r#"E:/Software/Nccn/ncnn-20240820-windows-vs2022/x64/lib"#.to_string());
 
 
 
         // println!("cargo:rustc-link-lib=dylib=c++");
-        println!("cargo:rustc-link-lib=static=msvcrt");
-        println!("cargo:rustc-link-search=native=E:/Software/Nccn/ncnn-20240820-windows-vs2022/x64/lib");
+        // println!("cargo:rustc-link-lib=msvcrt");
+        println!("cargo:rustc-link-search=native={}",ncnn_lib);
         println!("cargo:rustc-link-lib=static=ncnn");
         println!("cargo:rustc-link-lib=static=GenericCodeGen");
         // println!("cargo:rustc-link-lib=static=glslang");
